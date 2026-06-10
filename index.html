@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Argentina Walk — Estadio en Primera Persona</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <canvas id="c"></canvas>
+
+  <div id="overlay">
+    <div class="flag">🇦🇷</div>
+    <h1>ESTADIO ARGENTINA</h1>
+    <p class="tagline">Simulación en primera persona</p>
+    <button id="startBtn">▶&nbsp; ENTRAR AL ESTADIO</button>
+    <div class="controls-grid">
+      <div class="ctrl"><kbd>↑ ↓ ← →</kbd><span>Caminar</span></div>
+      <div class="ctrl"><kbd>ESPACIO</kbd><span>Saltar</span></div>
+      <div class="ctrl"><kbd>MOUSE</kbd><span>Mirar</span></div>
+      <div class="ctrl"><kbd>ESC</kbd><span>Pausar</span></div>
+    </div>
+  </div>
+
+  <div id="hud">
+    <div id="crosshair"></div>
+    <div id="hint">ESC para pausar</div>
+    <div id="paused-msg">PAUSADO — Click para continuar</div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
