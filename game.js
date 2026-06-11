@@ -20,7 +20,7 @@ renderer.shadowMap.enabled  = true;
 renderer.shadowMap.type     = THREE.PCFSoftShadowMap;
 renderer.toneMapping        = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.92;
-renderer.physicallyCorrectLights = true;
+renderer.useLegacyLights = false;
 
 /* ─── Scene ─────────────────────────────────────────────────── */
 const scene = new THREE.Scene();
@@ -62,9 +62,9 @@ sun.shadow.camera.far   = 280;
 sun.shadow.bias = -0.0006;
 scene.add(sun);
 
-scene.add(Object.assign(new THREE.DirectionalLight(0xBBCCFF, 0.35), {
-  position: new THREE.Vector3(-50, 40, -60)
-}));
+const fillLight = new THREE.DirectionalLight(0xBBCCFF, 0.35);
+fillLight.position.set(-50, 40, -60);
+scene.add(fillLight);
 
 // Stadium flood lights (4 corners)
 [[-50, 30, -70], [50, 30, -70], [-50, 30, 70], [50, 30, 70]].forEach(([x, y, z]) => {
