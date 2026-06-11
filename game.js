@@ -448,43 +448,95 @@ const npcs = NPC_SPAWN.map(([x, z], i) => buildNPC(x, z, i));
 /* ─── Player State ──────────────────────────────────────────── */
 const player = { yaw: 0, pitch: 0, vy: 0, y: EYE_H, onGround: true };
 const keys   = {};
+let gameActive = false;
+let locked     = false;
+let dragLook   = false;
+let lastMX = 0, lastMY = 0;
 
 window.addEventListener('keydown', e => {
+  if (!gameActive) return;
   keys[e.code] = true;
   if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) e.preventDefault();
 });
-window.addEventListener('keyup',   e => { keys[e.code] = false; });
+window.addEventListener('keyup', e => { keys[e.code] = false; });
 
-/* ─── Pointer Lock ──────────────────────────────────────────── */
-let locked = false;
-const overlay   = document.getElementById('overlay');
-const hud       = document.getElementById('hud');
-const pauseMsg  = document.getElementById('paused-msg');
+/* ─── Pointer Lock (mejora opcional) ───────────────────────── */
+const overlay  = document.getElementById('overlay');
+const hud      = document.getElementById('hud');
+const pauseMsg = document.getElementById('paused-msg');
+const hint     = document.getElementById('hint');
 
-document.addEventListener('pointerlockchange', () => {
-  locked = document.pointerLockElement === canvas;
-  overlay.style.display = locked ? 'none' : 'flex';
-  hud.classList.toggle('visible', locked);
-  pauseMsg.classList.toggle('show', !locked && overlay.style.display === 'none');
-});
+function tryLock() {
+  try {
+    const req = canvas.requestPointerLock || canvas.mozRequestPointerLock;
+    if (req) req.call(canvas);
+  } catch(e) {}
+}
 
-window.addEventListener('mousemove', e => {
-  if (!locked) return;
-  player.yaw   -= e.movementX * 0.0022;
-  player.pitch -= e.movementY * 0.0022;
-  player.pitch  = Math.max(-1.45, Math.min(1.45, player.pitch));
-});
+function startGame() {
+  gameActive = true;
+  overlay.style.display = 'none';
+  hud.classList.add('visible');
+  pauseMsg.classList.remove('show');
+  tryLock();
+}
 
-document.getElementById('startBtn').addEventListener('click', () => canvas.requestPointerLock());
-pauseMsg.addEventListener('click', () => canvas.requestPointerLock());
-
-// ESC pauses (pointer lock releases automatically)
-window.addEventListener('keydown', e => {
-  if (e.code === 'Escape' && !locked) {
+function onLockChange() {
+  locked = !!(document.pointerLockElement || document.mozPointerLockElement);
+  if (locked) {
     pauseMsg.classList.remove('show');
-    canvas.requestPointerLock();
+    hint.textContent = 'ESC para pausar';
+  } else if (gameActive) {
+    hint.textContent = 'Click para capturar el mouse · Arrastrá para mirar';
+    pauseMsg.classList.add('show');
   }
+}
+document.addEventListener('pointerlockchange', onLockChange);
+document.addEventListener('mozpointerlockchange', onLockChange);
+document.addEventListener('pointerlockerror', () => {
+  locked = false;
+  if (gameActive) hint.textContent = 'Arrastrá con el mouse para mirar · Flechas para mover';
 });
+
+// Mouse look: pointer lock (mejor) o drag (fallback)
+window.addEventListener('mousemove', e => {
+  if (!gameActive) return;
+  if (locked) {
+    player.yaw   -= e.movementX * 0.0022;
+    player.pitch -= e.movementY * 0.0022;
+  } else if (dragLook) {
+    player.yaw   -= (e.clientX - lastMX) * 0.0038;
+    player.pitch -= (e.clientY - lastMY) * 0.0038;
+    lastMX = e.clientX;
+    lastMY = e.clientY;
+  }
+  player.pitch = Math.max(-1.45, Math.min(1.45, player.pitch));
+});
+
+canvas.addEventListener('mousedown', e => {
+  if (!gameActive) return;
+  if (!locked) { tryLock(); dragLook = true; lastMX = e.clientX; lastMY = e.clientY; }
+});
+window.addEventListener('mouseup', () => { dragLook = false; });
+
+// Touch look (mobile)
+let touchStart = null;
+canvas.addEventListener('touchstart', e => {
+  if (!gameActive) return;
+  const t = e.touches[0];
+  touchStart = { x: t.clientX, y: t.clientY };
+}, { passive: true });
+canvas.addEventListener('touchmove', e => {
+  if (!gameActive || !touchStart) return;
+  const t = e.touches[0];
+  player.yaw   -= (t.clientX - touchStart.x) * 0.004;
+  player.pitch -= (t.clientY - touchStart.y) * 0.004;
+  player.pitch  = Math.max(-1.45, Math.min(1.45, player.pitch));
+  touchStart    = { x: t.clientX, y: t.clientY };
+}, { passive: true });
+
+document.getElementById('startBtn').addEventListener('click', startGame);
+pauseMsg.addEventListener('click', () => { tryLock(); pauseMsg.classList.remove('show'); });
 
 /* ─── Game Loop ─────────────────────────────────────────────── */
 let prevTime = performance.now();
@@ -496,7 +548,7 @@ let prevTime = performance.now();
   const t = now / 1000;
 
   /* ── Player movement ── */
-  if (locked) {
+  if (gameActive) {
     const sy = Math.sin(player.yaw), cy = Math.cos(player.yaw);
     let mx = 0, mz = 0;
 
